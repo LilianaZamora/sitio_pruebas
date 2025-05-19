@@ -1,0 +1,60 @@
+name: Pruebas Cypress
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Checkout del código
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Paso 2: Configurar Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: '20'
+
+      # Paso 3: Eliminar node_modules y package-lock.json (en caso de que existan problemas previos)
+      - name: Remove node_modules and package-lock.json
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
+
+      # Paso 4: Instalar dependencias de Node.js
+      - name: Install dependencies
+        run: npm install
+
+      # Paso 5: Iniciar la aplicación con Vite
+      - name: Start the application
+        run: npm run dev &
+        env:
+          CI: true
+
+      # Paso 6: Esperar a que la aplicación esté lista para las pruebas
+      - name: Wait for the application to be ready
+        run: npx wait-on http://localhost:5173
+
+      # Paso 7: Ejecutar pruebas de Cypress
+      - name: Run Cypress tests
+        run: npx cypress run
+
+      # Paso opcional 1: Generar reporte de Cypress con Mochawesome
+      - name: Generate Mochawesome report
+        run: npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/reports,reportFilename=report
+
+      # Paso opcional 2: Subir el reporte de Cypress como artefacto
+      - name: Upload Cypress reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: cypress-reports
+          path: cypress/reports/
